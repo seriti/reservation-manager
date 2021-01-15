@@ -28,19 +28,18 @@ class CheckoutWizard extends Wizard
     protected $temp_token;
     protected $user_id;
     protected $table_prefix;
-    protected $table_prefix_pmt;
-    
+    protected $package_id;
+        
     //configure
     public function setup($param = []) 
     {
         $error = '';
         if(!defined('MODULE_RESERVE')) $error .= 'Reserve module not defined. ';
-        if(!defined('MODULE_PAYMENT')) $error .= 'Payment module not defined. ';
+        //if(!defined('MODULE_PAYMENT')) $error .= 'Payment module not defined. ';
         if($error !== '')  throw new Exception('CONSTANT_NOT_DEFINED: '.$error);
         
         $this->table_prefix = MODULE_RESERVE['table_prefix'];
-        $this->table_prefix_pmt = MODULE_PAYMENT['table_prefix'];
-
+       
         $this->user = $this->getContainer('user');
         $this->temp_token = $this->user->getTempToken();
 
@@ -53,23 +52,45 @@ class CheckoutWizard extends Wizard
         parent::setup($param);
 
         //standard user cols
-        $this->addVariable(array('id'=>'ship_option_id','type'=>'INTEGER','title'=>'Shipping option','required'=>true));
-        $this->addVariable(array('id'=>'ship_location_id','type'=>'INTEGER','title'=>'Shipping location','required'=>true));
-        $this->addVariable(array('id'=>'pay_option_id','type'=>'INTEGER','title'=>'Payment option','required'=>true));
+        $this->addVariable(array('id'=>'date_arrive','type'=>'DATE','title'=>'Date arrive','required'=>true));
+        $this->addVariable(array('id'=>'date_depart','type'=>'DATE','title'=>'Date depart','required'=>true));
+        $this->addVariable(array('id'=>'no_people','type'=>'INTEGER','min'=>1,'title'=>'Number of people','required'=>true));
+
+        $this->addVariable(array('id'=>'group_leader','type'=>'STRING','title'=>'Group leader','required'=>false));
+        $this->addVariable(array('id'=>'people_notes','type'=>'TEXT','title'=>'People notes','required'=>true));
         
         $this->addVariable(array('id'=>'user_email','type'=>'EMAIL','title'=>'Your email address','required'=>true));
         $this->addVariable(array('id'=>'user_name','type'=>'STRING','title'=>'Your name','required'=>false));
         $this->addVariable(array('id'=>'user_cell','type'=>'STRING','title'=>'Your name','required'=>false));
-        $this->addVariable(array('id'=>'user_ship_address','type'=>'TEXT','title'=>'Shipping address','required'=>true));
         $this->addVariable(array('id'=>'user_bill_address','type'=>'TEXT','title'=>'Billing address','required'=>true));
         
         //define pages and templates
-        $this->addPage(1,'Setup','reserve/checkout_page1.php',['go_back'=>true]);
-        $this->addPage(2,'Confirm totals','reserve/checkout_page2.php');
-        $this->addPage(3,'Delivery details','reserve/checkout_page3.php');
+        $this->addPage(1,'Dates','reserve/checkout_page1.php',['go_back'=>true]);
+        $this->addPage(2,'People details','reserve/checkout_page2.php');
+        $this->addPage(3,'Confirm enquiry','reserve/checkout_page3.php');
         $this->addPage(4,'Payment','reserve/checkout_page4.php',['final'=>true]);
             
 
+    }
+
+    //tell wizard what package we are dealing with
+    public function initialConfig() 
+    {
+        if(isset($_GET['package'])) {
+            $this->data['package_id'] = Secure::clean('integer',$_GET['package']);
+            $this->data['package'] = Helpers::getPackage($this->db,$this->table_prefix,$this->data['package_id'],$error);
+            if($error !== '') {
+                throw new Exception('RESERVE_PACKAGE_ERROR: Could not process enquiry for unrecognised Package['.$this->data['package_id'].'].');
+                exit;
+            }
+
+            $system = $this->getContainer('system');
+            $this->data['people_notes_default'] = $system->getDefault('RESERVE_PREFERENCE','');
+            
+            $this->data['labels'] = MODULE_RESERVE['labels'];
+
+            $this->saveData('data');
+        }
     }
 
     public function processPage() 
@@ -79,39 +100,16 @@ class CheckoutWizard extends Wizard
 
         //process shipping and payment options
         if($this->page_no == 1) {
+            $date_arrive = $this->form['date_arrive'];
+            $date_depart = $this->form['date_depart'];
+            $no_people = $this->form['no_people'];
 
+            $date_now = date('Y-m-d');
+            $days_to_depart = Date::calcDays($date_now,$date_arrive,'MYSQL',['include_first'=>false]);
+            if($days_to_depart < 1) $this->addError('Arrival date['.$date_arrive.'] must be tomorrow or later');
             
-            $ship_option_id = $this->form['ship_option_id'];
-            $ship_location_id = $this->form['ship_location_id'];
-            $pay_option_id = $this->form['pay_option_id'];
-
-            $output = Helpers::calcCartTotals($this->db,$this->table_prefix,$this->temp_token,$ship_option_id,$ship_location_id,$pay_option_id,$error_tmp);
-            if($error_tmp !== '') {
-               $error = 'Could not calculate cart totals. ';
-               if($this->debug) $error .= $error_tmp; 
-               $this->addError($error); 
-            } else {
-                $sql = 'SELECT name FROM '.$this->table_prefix.'ship_location WHERE location_id = "'.$this->db->escapeSql($ship_location_id).'" ';
-                $this->data['ship_location'] = $this->db->readSqlValue($sql);
-                $sql = 'SELECT name FROM '.$this->table_prefix.'ship_option WHERE option_id = "'.$this->db->escapeSql($ship_option_id).'" ';
-                $this->data['ship_option'] = $this->db->readSqlValue($sql);
-                $sql = 'SELECT name,provider_code FROM '.$this->table_prefix.'pay_option WHERE option_id = "'.$this->db->escapeSql($pay_option_id).'" ';
-                $this->data['pay'] = $this->db->readSqlRecord($sql);
-                $this->data['pay_option'] = $this->data['pay']['name'];
-
-                $provider = PaymentHelpers::getProvider($this->db,$this->table_prefix_pmt,'CODE',$this->data['pay']['provider_code']);
-                if($provider == 0) {
-                    $this->addError('Payment provider not recognised');
-                } else {
-                    $this->data['pay']['type_id'] = $provider['type_id'];
-                    $this->data['pay']['provider_id'] = $provider['provider_id'];
-                }    
-                
-                $this->data['totals'] = $output['totals'];
-                $this->data['items'] = $output['items'];
-                $this->data['order_id'] = $output['order_id'];
-            }
-
+            $no_nights = Date::calcNights($date_arrive,$date_depart,'MYSQL');
+            if($no_nights < 1 ) $this->addError('Arrival date['.$date_arrive.'] must be before departure date['.$date_depart.']');
         } 
         
         //process additional info required
@@ -162,12 +160,12 @@ class CheckoutWizard extends Wizard
                     $mailer = $this->getContainer('mail');
                     $to = $email;
                     $from = ''; //default config email from used
-                    $subject = SITE_NAME.' user checkout registration';
+                    $subject = SITE_NAME.' user registration';
                     $body = 'Hi There '.$name."\r\n".
                             'You have been registered as a user with us. Please note your credentials below:'."\r\n".
                             'Login email: '.$email."\r\n".
                             'Login Password: '.$password."\r\n\r\n".
-                            'Your are logged in for 30 days from device that you processed order from, unless you logout or delete site cookies.'."\r\n".
+                            'Your are logged in for 30 days from device that you processed enquiry from, unless you logout or delete site cookies.'."\r\n".
                             'You can at any point request a password reset or login token to be emailed to you from login screen.';
 
                     if($mailer->sendEmail($from,$to,$subject,$body,$error_tmp)) {
@@ -187,7 +185,6 @@ class CheckoutWizard extends Wizard
                 $data = [];
                 $data['user_id'] = $this->user_id;
                 $data['cell'] = $this->form['user_cell'];
-                $data['ship_address'] = $this->form['user_ship_address'];
                 $data['bill_address'] = $this->form['user_bill_address'];
 
                 $extend = $this->db->getRecord($table_extend,['user_id'=>$data['user_id']]);
@@ -206,88 +203,60 @@ class CheckoutWizard extends Wizard
                 }
             } 
 
-            //finally update cart/order with all details
+            //Create reservation enquiry
             if(!$this->errors_found) {
-                $table_order = $this->table_prefix.'order';
+                $table_reserve = $this->table_prefix.'reserve';
+                
+                //get lowest initial status setting
+                $sql = 'SELECT status_id FROM '.$this->table_prefix.'reserve_status ORDER BY sort LIMIT 1';
+                $status_id = $this->db->readSqlValue($sql,0);
+
                 $data = [];
                 //NB: *** ASSIGN USER ID & REMOVE TEMP TOKEN *** this designates it as a valid order and not temp cart
-                $data['user_id'] = $this->user_id;
+                $data['user_id_create'] = $this->user_id;
+                $data['user_id_responsible'] = $this->user_id;
                 $data['date_create'] = date('Y-m-d H:i:s');
-                $data['ship_address'] = $this->form['user_ship_address'];
-                $data['status'] = 'ACTIVE';
-                $data['temp_token'] = '';
+                $data['status_id'] = $status_id;
+                $data['package_id'] = $this->data['package_id'];
+                $data['code'] = $this->data['package']['package_code'];
 
-                //$where = ['temp_token' => $this->temp_token];
-                $where = ['order_id' => $this->data['order_id']];
-                $this->db->updateRecord($table_order,$data,$where,$error_tmp);
+                $data['date_arrive'] = $this->form['date_arrive'];
+                $data['date_depart'] = $this->form['date_depart'];
+                $data['no_people'] = $this->form['no_people'];
+                $data['group_leader'] = $this->form['group_leader'];
+                $data['people_notes'] = $this->form['people_notes'];
+                
+                $this->data['reserve_id'] = $this->db->insertRecord($table_reserve,$data,$error_tmp);
                 if($error_tmp !== '') {
-                    $error = 'We could not save order details.';
+                    $error = 'We could not save enquiry details.';
                     if($this->debug) $error .= $error_tmp;
                     $this->addError($error);
                 } 
             }
 
+            //send confirmation email
             if(!$this->errors_found) {
-                $provider = PaymentHelpers::getProvider($this->db,$this->table_prefix_pmt,'CODE',$this->data['pay']['provider_code']);
-                if($provider == 0) $this->addError('Payment provider not recognised');
-            }    
+                //send user message with payment instructions
+                $param = ['cc_admin'=>true];
+                $subject = SITE_NAME.' Reservation enquiry';
+                $message = 'Thank you for your enquiry!<br/>'.
+                           'We will contact you shortly to confirm details.';
 
-            //finally SETUP payment gateway form if that option requested, or email EFT instructions
-            if(!$this->errors_found) {
-                $gateway = new Gateway($this->db,$this->container);
-                $gateway->setup('SHOP',$provider['provider_id']);
+                Helpers::sendReserveMessage($this->db,$this->table_prefix,$this->container,$this->data['reserve_id'],$subject,$message,$param,$error_tmp);
+                if($error_tmp !== '') {
+                    $message = 'We could not email you enquiry details, but your enquiry has been successfully processed. '.
+                               'Please check your account page for details.';
+                    if($this->debug) $message .= '<br/>Error: '.$error_tmp;
+                    $this->addMessage($message);
+                } else {
+                    $this->addMessage('Successfully emailed you with enquiry details.');
+                }
+
                 
-                $reference = 'ORDER-'.$this->data['order_id'];
-                $reference_id =$this->data['order_id'];
-                $amount = $this->data['totals']['total'];
-
-                if($provider['type_id'] === 'EFT_TOKEN') {
-                    
-                    //send user message with payment instructions
-                    $param = ['cc_admin'=>true];
-                    $subject = 'EFT Payment instructions';
-                    $message = 'Please use payment Reference: <strong>'.$reference.'</strong><br/>'.
-                               'Total amount due: <strong>'.CURRENCY_ID.number_format($amount,2).'</strong><br/>'. 
-                               'We will ship your order once payment is received. <br/>'. 
-                               'Our bank account details:<br/>'.
-                               '<strong>'.nl2br($provider['config']).'</strong>';
-
-                    Helpers::sendOrderMessage($this->db,$this->table_prefix,$this->container,$this->data['order_id'],$subject,$message,$param,$error_tmp);
-                    if($error_tmp !== '') {
-                        $message = 'We could not email you order details, but your order has been successfully processed. PLease check your account page for details.';
-                        if($this->debug) $message .= $error_tmp;
-                        $this->addMessage($message);
-                    } else {
-                        $provider_ref = 'NA';
-                        $gateway->saveTransaction($provider_ref,$reference,$reference_id,$amount,$this->data['user_email'],$error_tmp);
-                        //PaymentHelpers::saveEftTokenTransact($this->db,$this->table_prefix_pmt,$provider['provider_id'],'SHOP',$reference_id,$reference,$amount,$this->data['user_email']);
-                    }
-                }
-
-                if($provider['type_id'] === 'GATEWAY_FORM') {
-                    //NB: all kinds of wizardry happens here, transaction initialisesd, gateway initialised, form created at end.                    
-                    $gateway_form = $gateway->getGatewayForm($reference,$reference_id,$amount,$this->data['user_email'],$error_tmp);
-                    if($error_tmp !== '') {
-                        $error .= 'Could not setup payment gateway! Please try again later or select an alternative payment method.';
-                        if($this->debug) $error .= $error_tmp;
-                        $this->addError($error);
-                    } else {
-                        $this->data['gateway_form'] = $gateway_form;
-                    }
-                }
-            }
-               
+            }    
+   
         } 
-
-        //final page so no fucking processing possible moron
-        if($this->page_no == 4) {
-
-            
-
-            
-
-            
-        } 
+        
     }
 
     public function setupPageData($no)
@@ -318,7 +287,6 @@ class CheckoutWizard extends Wizard
             if($user_extend != 0) {
                 $this->form['user_email_alt'] = $user_extend['email_alt'];
                 $this->form['user_cell'] = $user_extend['cell'];
-                $this->form['user_ship_address'] = $user_extend['ship_address'];
                 $this->form['user_bill_address'] = $user_extend['bill_address'];
 
                 //NB: need to save $this->data as required in subsequent pages

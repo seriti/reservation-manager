@@ -22,7 +22,7 @@ class ReserveItemController
         $html = $table->processTable();
         
         $template['html'] = $html;
-        //$template['title'] = MODULE_LOGO.'Reservation '.MODULE_RESERVE['labels']['item'].'s';
+        $template['title'] = 'Reservation Accommodation Units';
         
         return $this->container->view->render($response,'admin_popup.php',$template);
     }

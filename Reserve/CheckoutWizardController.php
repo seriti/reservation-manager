@@ -38,7 +38,7 @@ class CheckoutWizardController
         $html = $wizard->process();
 
         $template['html'] = $html;
-        $template['title'] = 'Checkout';
+        $template['title'] = 'Reservation Enquiry';
         //$template['javascript'] = $wizard->getJavascript();
 
         return $this->container->view->render($response,'public.php',$template);

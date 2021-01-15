@@ -22,7 +22,7 @@ class ReserveTransferController
         $html = $table->processTable();
         
         $template['html'] = $html;
-        //$template['title'] = MODULE_LOGO.'Transfers';
+        $template['title'] = 'Reservation Transfers';
         
         return $this->container->view->render($response,'admin_popup.php',$template);
     }

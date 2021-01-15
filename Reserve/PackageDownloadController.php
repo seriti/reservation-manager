@@ -2,9 +2,11 @@
 namespace App\Reserve;
 
 use Psr\Container\ContainerInterface;
-use App\Reserve\ReserveFile;
+use App\Reserve\PackageFile;
 
-class ReserveFileController
+use Seriti\Tools\Secure;
+
+class PackageDownloadController
 {
     protected $container;
     
@@ -15,15 +17,17 @@ class ReserveFileController
 
     public function __invoke($request, $response, $args)
     {
-        $table = TABLE_PREFIX.'file'; 
-        $upload = new ReserveFile($this->container->mysql,$this->container,$table);
+        $table = MODULE_RESERVE['table_prefix'].'file'; 
+        $upload = new PackageFile($this->container->mysql,$this->container,$table);
+
+        $_GET['mode'] = 'download';
 
         $upload->setup();
         $html = $upload->processUpload();
         
         $template['html'] = $html;
-        $template['title'] = 'Reservation Documents';
+        $template['title'] = 'Package document download';
         
-        return $this->container->view->render($response,'admin_popup.php',$template);
+        return $this->container->view->render($response,'public.php',$template);
     }
 }

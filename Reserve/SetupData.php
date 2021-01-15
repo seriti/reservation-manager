@@ -8,8 +8,9 @@ class SetupData extends SetupModuledata
 
     public function setupSql()
     {
-        $this->tables = ['reserve','reserve_status','location','source','agent','service_operator','cash_type','reserve_cash','item','item_category','reserve_item','reserve_people',
-                         'reserve_payment','reserve_transfer','transfer_type','package','payment_type','payment_option','file','user_extend'];
+        $this->tables = ['reserve','reserve_status','location','source','agent','service_operator','cash_type','reserve_cash','item','item_category',
+                         'reserve_item','reserve_people','reserve_message','reserve_payment','reserve_transfer',
+                         'transfer_type','package','package_category','payment_type','payment_option','file','user_extend'];
 
         $this->addCreateSql('reserve',
                             'CREATE TABLE `TABLE_NAME` (
@@ -25,11 +26,13 @@ class SetupData extends SetupModuledata
                               `admin_notes` TEXT NOT NULL,
                               `group_leader` VARCHAR(250) NOT NULL,
                               `emergency_notes` TEXT NOT NULL,
+                              `people_notes` TEXT NOT NULL,
                               `user_id_create` INT NOT NULL,
                               `user_id_responsible` INT NOT NULL,
                               `user_id_modify` INT NOT NULL,
                               `date_create` DATE NOT NULL,
                               `date_modify` DATE NOT NULL,
+                              `terms_accepted` TINYINT(1) NOT NULL,
                               `status_id` INT NOT NULL,
                               PRIMARY KEY (`reserve_id`)
                             ) ENGINE = MyISAM DEFAULT CHARSET=utf8');
@@ -171,6 +174,16 @@ class SetupData extends SetupModuledata
                               UNIQUE KEY `idx_reserve_item1` (`reserve_id`,`operator_id`,`date`)
                             ) ENGINE = MyISAM DEFAULT CHARSET=utf8');
 
+        $this->addCreateSql('reserve_message',
+                            'CREATE TABLE `TABLE_NAME` (
+                              `message_id` INT NOT NULL AUTO_INCREMENT,
+                              `reserve_id` INT NOT NULL,
+                              `subject` VARCHAR(250) NOT NULL,
+                              `message` TEXT NOT NULL,
+                              `date_sent` DATETIME NOT NULL,
+                              PRIMARY KEY (`message_id`)
+                            ) ENGINE = MyISAM DEFAULT CHARSET=utf8');
+
         $this->addCreateSql('transfer_type',
                             'CREATE TABLE `TABLE_NAME` (
                               `type_id` INT NOT NULL AUTO_INCREMENT,
@@ -178,6 +191,18 @@ class SetupData extends SetupModuledata
                               `sort` INT NOT NULL,
                               `status` VARCHAR(64) NOT NULL,
                               PRIMARY KEY (`type_id`)
+                            ) ENGINE = MyISAM DEFAULT CHARSET=utf8');
+
+        $this->addCreateSql('reserve_payment',
+                            'CREATE TABLE `TABLE_NAME` (
+                              `payment_id` INT NOT NULL AUTO_INCREMENT,
+                              `reserve_id` INT NOT NULL,
+                              `type_id` INT NOT NULL,
+                              `date` DATETIME NOT NULL,
+                              `amount` DECIMAL(12,2) NOT NULL,
+                              `comment` TEXT NOT NULL,
+                              `status` VARCHAR(64) NOT NULL,
+                              PRIMARY KEY (`payment_id`)
                             ) ENGINE = MyISAM DEFAULT CHARSET=utf8');
 
         $this->addCreateSql('package',
@@ -194,16 +219,13 @@ class SetupData extends SetupModuledata
                               PRIMARY KEY (`package_id`)
                             ) ENGINE = MyISAM DEFAULT CHARSET=utf8');
 
-        $this->addCreateSql('reserve_payment',
+        $this->addCreateSql('package_category',
                             'CREATE TABLE `TABLE_NAME` (
-                              `payment_id` INT NOT NULL AUTO_INCREMENT,
-                              `reserve_id` INT NOT NULL,
-                              `type_id` INT NOT NULL,
-                              `date` DATETIME NOT NULL,
-                              `amount` DECIMAL(12,2) NOT NULL,
-                              `comment` TEXT NOT NULL,
+                              `category_id` INT NOT NULL AUTO_INCREMENT,
+                              `name` VARCHAR(250) NOT NULL,
+                              `sort` INT NOT NULL,
                               `status` VARCHAR(64) NOT NULL,
-                              PRIMARY KEY (`payment_id`)
+                              PRIMARY KEY (`category_id`)
                             ) ENGINE = MyISAM DEFAULT CHARSET=utf8');
 
         $this->addCreateSql('payment_type',
@@ -240,6 +262,7 @@ class SetupData extends SetupModuledata
                               `encrypted` tinyint(1) NOT NULL,
                               `file_ext` varchar(16) NOT NULL,
                               `file_type` varchar(16) NOT NULL,
+                              `caption` varchar(255) NOT NULL,
                               PRIMARY KEY (`file_id`)
                             ) ENGINE=MyISAM DEFAULT CHARSET=utf8');
 

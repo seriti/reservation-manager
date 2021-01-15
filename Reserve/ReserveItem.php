@@ -14,7 +14,7 @@ class ReserveItem extends Table
         $param = ['row_name'=>$this->labels['item'],'col_label'=>'item','pop_up'=>true];
         parent::setup($param);        
                        
-        if(isset($_GET['id']))
+        //if(isset($_GET['id']))
 
         //NB: specify master table relationship
         $this->setupMaster(array('table'=>TABLE_PREFIX.'reserve','key'=>'reserve_id','child_col'=>'reserve_id', 

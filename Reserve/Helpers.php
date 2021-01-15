@@ -2,10 +2,14 @@
 namespace App\Reserve;
 
 use Exception;
+use Psr\Container\ContainerInterface;
+
+use Seriti\Tools\Audit;
 use Seriti\Tools\Calc;
 use Seriti\Tools\Calendar;
 use Seriti\Tools\Csv;
 use Seriti\Tools\Html;
+use Seriti\Tools\Image;
 use Seriti\Tools\Pdf;
 use Seriti\Tools\Doc;
 use Seriti\Tools\Date;
@@ -37,6 +41,157 @@ class Helpers {
                         
         return $record;
     } 
+
+    public static function getPackage($db,$table_prefix,$package_id,&$error)  
+    {
+        $error = '';
+        $table_package = $table_prefix.'package';
+        $table_category = $table_prefix.'package_category';
+        
+        $sql = 'SELECT P.package_id,P.package_code,P.category_id,P.title,P.info,P.body_html,'.
+                      'C.name AS category '.
+               'FROM '.$table_package.' AS P '.
+               'JOIN '.$table_category.' AS C ON(P.category_id = C.category_id) '.
+               'WHERE package_id = "'.$db->escapeSql($package_id).'" ';
+        $package = $db->readSqlRecord($sql);
+        if($package == 0) {
+            $error .= 'Package ID['.$package_id.'] invalid.';
+        } else {
+            //get other package info
+        }
+
+        return $package; 
+    }    
+
+    public static function getReservation($db,$table_prefix,$reserve_id,&$error)  
+    {
+        $error = '';
+        $reserve = [];
+        
+        $table_location = $table_prefix.'location';
+        $table_package = $table_prefix.'package';
+        $table_reserve = $table_prefix.'reserve';
+        $table_reserve_item = $table_prefix.'reserve_item';
+        $table_item = $table_prefix.'item';
+        $table_status = $table_prefix.'reserve_status';
+        $table_transfer = $table_prefix.'reserve_transfer';
+        $table_operator = $table_prefix.'service_operator';
+        $table_people = $table_prefix.'reserve_people';
+               
+        $sql = 'SELECT R.reserve_id,R.code,R.source_id,R.location_id,R.package_id,R.no_people,R.date_arrive,R.date_depart,R.status_id,'.
+                      'R.itinerary_notes,R.admin_notes,R.emergency_notes,R.people_notes,R.group_leader,R.terms_accepted,'.
+                      'S.name AS status,S.sort AS status_no,L.name AS location,R.user_id_responsible,P.title AS package '.
+               'FROM '.$table_reserve.' AS R JOIN '.$table_status.' AS S ON(R.status_id = S.status_id) '.
+                     'LEFT JOIN '.$table_location.' AS L ON(R.location_id = L.location_id) '.
+                     'LEFT JOIN '.$table_package.' AS P ON(R.package_id = P.package_id) '.
+               'WHERE R.reserve_id = "'.$db->escapeSql($reserve_id).'" ';
+        $reserve = $db->readSqlRecord($sql);
+        if($reserve == 0) {
+            $error .= 'Reservation ID['.$reserve_id.'] invalid.';
+        } else {    
+            $sql = 'SELECT RI.item_id, RI.date_arrive, RI.date_depart, RI.no_people, I.name '.
+                   'FROM '.$table_reserve_item.' AS RI JOIN '.$table_item.' AS I ON(RI.item_id = I.item_id) '.
+                   'WHERE RI.reserve_id = "'.$db->escapeSql($reserve_id).'" '.
+                   'ORDER BY RI.date_arrive';
+            $reserve['items'] = $db->readSqlArray($sql);
+
+            $sql = 'SELECT T.transfer_id,T.type_id,T.operator_id,O.name AS operator,T.operator_fee,T.total_cost, '.
+                          'T.date,T.start_time,T.start_place,T.end_time,T.end_place,T.no_people,T.notes  '.
+                   'FROM '.$table_transfer.' AS T JOIN '.$table_operator.' AS O ON(T.operator_id = O.operator_id) '.
+                   'WHERE T.reserve_id = "'.$db->escapeSql($reserve_id).'" '.
+                   'ORDER BY T.date, T.start_time';
+            $reserve['transfers'] = $db->readSqlArray($sql);
+
+            $sql = 'SELECT people_id,name,title,date_birth,sharing '.
+                   'FROM '.$table_people.' WHERE reserve_id = "'.$db->escapeSql($reserve_id).'" '.
+                   'ORDER BY name ';
+            $reserve['people'] = $db->readSqlArray($sql);
+        }    
+        
+        return $reserve;
+    }
+
+    public static function sendReserveMessage($db,$table_prefix,ContainerInterface $container,$reserve_id,$subject,$message,$param=[],&$error)
+    {
+        $html = '';
+        $error = '';
+        $error_tmp = '';
+
+        if(!isset($param['cc_admin'])) $param['cc_admin'] = true;
+        if(!isset($param['login_link'])) $param['login_link'] = true;
+
+        $system = $container['system'];
+        $mail = $container['mail'];
+        $user = $container['user'];
+        $user_id = $user->getId();
+
+        //setup email parameters
+        $mail_footer = $system->getDefault('RESERVE_EMAIL_FOOTER','');
+        $mail_param = [];
+        $mail_param['format'] = 'html';
+        if($param['cc_admin']) $mail_param['bcc'] = MAIL_FROM;
+       
+        $reserve = self::getReservation($db,$table_prefix,$reserve_id,$error_tmp);
+        if($reserve === false or $error_tmp !== '') {
+            $error .= 'Could not get Reservation details: '.$error_tmp;
+        } else {
+            if($reserve['user_id_responsible'] == 0) {
+                $error .= 'No responsible user linked to reservation';
+            } else {
+                $responsible_user = $user->getUser('ID',$reserve['user_id_responsible']);
+                if($responsible_user == 0) $error .= 'Responsible user['.$reserve['user_id_responsible'].'] Invalid.';
+            }    
+        }    
+
+        if($error === '') {
+            
+            $login_html = '';
+            if($param['login_link']) {
+                $days_expire = 7;
+                $login_url = $user->resetEmailLoginToken($reserve['user_id_responsible'],$days_expire);
+                $login_html = '<br/><h3>Click <a href="'.$login_url.'">here to login</a> and manage reservation</h3>';
+            }
+
+            $mail_from = ''; //will use default MAIL_FROM
+            $mail_to = $responsible_user['email'];
+
+            $mail_subject = SITE_NAME.' Reservation ID['.$reserve_id.'] ';
+            $audit_str = 'Reserve ID['.$reserve_id.'] ';
+
+            if($subject !== '') $mail_subject .= ': '.$subject;
+            
+            $mail_body = '<h1>Attention: '.$responsible_user['name'].'</h1>';
+            if($message !== '') $mail_body .= '<h2>'.$message.'</h2>';
+
+            $mail_body .= '<h2>Reservation for : '.$reserve['package'].'</h2>';
+            $mail_body .= 'No People : <b>'.$reserve['no_people'].'</b><br/>';
+            $mail_body .= 'Arrive on <b>'.Date::formatDate($reserve['date_arrive']).'</b> and depart on <b>'.Date::formatDate($reserve['date_depart']).'</b><br/>';
+            $mail_body .= 'Status : <b>'.$reserve['status'].'</b><br/>';
+
+            $mail_body .= $login_html;
+            
+           
+            /* Payments lonked to invoices NOT reservations??
+            if($reserve['payments'] !== 0) {
+                $mail_body .= '<h3>Payments</h3>'.Html::arrayDumpHtml($reserve['payments'],$html_param);
+            }
+            */
+    
+            $mail_body .= '<br/><br/>'.$mail_footer;
+            
+            $mail->sendEmail($mail_from,$mail_to,$mail_subject,$mail_body,$error_tmp,$mail_param);
+            if($error_tmp != '') { 
+                $error .= 'ERROR sending reservation details to email['. $mail_to.']:'.$error_tmp; 
+                $audit_str .=  $error_str;
+            } else {
+                $audit_str .= 'SUCCESS sending reservation details to email['. $mail_to.']'; 
+            }
+
+            Audit::action($db,$user_id,'RESERVE_EMAIL',$audit_str);
+        }
+
+        if($error === '') return true; else return false;
+    }
 
     public static function getMonthlySequence($from_month,$from_year,$to_month,$to_year)  {
         $months = [];
@@ -191,8 +346,54 @@ class Helpers {
 
 
         return $html;
+    }
+
+    public function getPackageImageGallery($db,$table_prefix,$s3,$package_id,$param = [])
+    {
+        $html = '';
+
+        if(!isset($param['access'])) $param['access'] = MODULE_RESERVE['images']['access'];
+
+        $sql = 'SELECT title,info '.
+               'FROM '.$table_prefix.'package '.
+               'WHERE package_id = "'.$db->escapeSql($package_id).'" AND status <> "HIDE"';
+        $package = $db->readSqlRecord($sql);
+        if($package === 0) {
+            $html = '<h1>Package no longer available.</h1>';
+            return $html;
+        } else {
+            $html .= '<h1><a href="Javascript:onClick=window.close()">&laquo;go back</a> '.$package['title'].'</h1>';
+        }
 
 
+        $location_id = 'PACIMG'.$package_id;
+        $sql = 'SELECT file_id,file_name,file_name_tn,caption AS title '.
+               'FROM '.$table_prefix.'file WHERE location_id = "'.$db->escapeSql($location_id).'" ';
+        $images = $db->readSqlArray($sql);
+        if($images != 0) {
+            //setup amazon links
+            foreach($images as $id => $image) {
+                $url = $s3->getS3Url($image['file_name'],['access'=>$param['access']]);
+                $images[$id]['src'] = $url;
+            }
+
+            if(count($images) == 1) {
+                foreach($images as $image) {
+                    $html .= '<img src="'.$image['src'].'" class="img-responsive center-block">';    
+                }  
+            } else {  
+                $options = array();
+                $options['img_style'] = 'max-height:600px;';
+                //$options['src_root'] = ''; stored on AMAZON
+                $type = 'CAROUSEL'; //'THUMBNAIL'
+                
+                $html .= Image::buildGallery($images,$type,$options);
+                
+            }  
+            
+        } 
+
+        return $html; 
     }
     
 }

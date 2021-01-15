@@ -28,9 +28,13 @@ class Package extends Table
         
         //widens value column
         $this->classes['col_value'] = 'col-sm-9 col-lg-10 edit_value';
+
+        $this->addForeignKey(array('table'=>TABLE_PREFIX.'reserve','col_id'=>'location_id','message'=>'Reservation'));
         
         $this->addTableCol(array('id'=>'package_id','type'=>'INTEGER','title'=>'Package ID','key'=>true,'key_auto'=>true,'list'=>true));
         $this->addTableCol(array('id'=>'package_code','type'=>'STRING','title'=>'Package code'));
+        $this->addTableCol(array('id'=>'category_id','type'=>'INTEGER','title'=>'Category',
+                                 'join'=>'name FROM '.TABLE_PREFIX.'package_category WHERE category_id'));
         $this->addTableCol(array('id'=>'title','type'=>'STRING','title'=>'Title','hint'=>'This appears as package header in large font'));
         $this->addTableCol(array('id'=>'body_markdown','type'=>'TEXT','secure'=>false,'title'=>'Page text','rows'=>20,
                                  'hint'=>'Uses <a href="http://parsedown.org/tests/" target="_blank">parsedown</a> extended <a href="https://www.markdownguide.org/basic-syntax" target="_blank">markdown</a> format, or raw html',
@@ -44,21 +48,34 @@ class Package extends Table
         $this->addAction(array('type'=>'edit','text'=>'edit','icon_text'=>'edit'));
         $this->addAction(array('type'=>'delete','text'=>'delete','icon_text'=>'delete','pos'=>'R'));
 
+        $this->addSelect('category_id','SELECT category_id,name FROM '.TABLE_PREFIX.'package_category WHERE status = "OK" ORDER BY sort');
+
         $this->addSearch(array('package_id','name','text_markdown','status','info'),array('rows'=>2));
 
         $status = ['OK','HIDE'];
         $this->addSelect('status',['list'=>$status,'list_assoc'=>false]);
         
-
+        /*
         $this->setupImages(array('table'=>TABLE_PREFIX.'file','location'=>'PACIMG','max_no'=>100,
                                   'icon'=>'<span class="glyphicon glyphicon-picture" aria-hidden="true"></span>&nbsp;manage',
                                   'list'=>true,'list_no'=>1,'storage'=>STORAGE_WWW,'path'=>BASE_UPLOAD_WWW,
                                   'link_url'=>'package_image','link_data'=>'SIMPLE','width'=>'700','height'=>'600'));
 
-                                  
         $this->setupFiles(array('table'=>TABLE_PREFIX.'file','location'=>'PACDOC','max_no'=>100,
                                 'icon'=>'<span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>&nbsp;&nbsp;manage',
                                 'list'=>true,'list_no'=>1,'storage'=>STORAGE_WWW,
+                                'link_url'=>'package_file','link_data'=>'SIMPLE','width'=>'700','height'=>'600'));
+        */
+
+        $this->setupImages(array('table'=>TABLE_PREFIX.'file','location'=>'PACIMG','max_no'=>10,
+                                  'icon'=>'<span class="glyphicon glyphicon-picture" aria-hidden="true"></span>&nbsp;manage',
+                                  'list'=>true,'list_no'=>1,'storage'=>STORAGE,'access'=>IMAGE_CONFIG['access'],
+                                  'link_url'=>'package_image','link_data'=>'SIMPLE','width'=>'700','height'=>'600'));
+
+                                  
+        $this->setupFiles(array('table'=>TABLE_PREFIX.'file','location'=>'PACDOC','max_no'=>100,
+                                'icon'=>'<span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>&nbsp;&nbsp;manage',
+                                'list'=>true,'list_no'=>1,'storage'=>STORAGE,
                                 'link_url'=>'package_file','link_data'=>'SIMPLE','width'=>'700','height'=>'600'));
         
 

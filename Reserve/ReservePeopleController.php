@@ -22,7 +22,7 @@ class ReservePeopleController
         $html = $table->processTable();
         
         $template['html'] = $html;
-        //$template['title'] = MODULE_LOGO.'People';
+        $template['title'] = 'Reservation Guests';
         
         return $this->container->view->render($response,'admin_popup.php',$template);
     }

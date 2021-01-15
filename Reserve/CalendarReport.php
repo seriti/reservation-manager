@@ -25,7 +25,7 @@ class CalendarReport extends ReportTool
         $this->addReport('RESERVE_ITEM2','Reservations '.MODULE_RESERVE['labels']['item'].' calendar, by '.MODULE_RESERVE['labels']['item'],$param); 
         
         $param = ['input'=>['select_operator','select_month_period','select_status']];
-        $this->addReport('TRANSFER','Reservations calendar',$param); 
+        $this->addReport('TRANSFER','Transfer calendar',$param); 
 
         
         $this->addInput('select_location','');

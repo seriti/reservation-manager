@@ -11,6 +11,8 @@ class Location extends Table
     {
         $param = ['row_name'=>'Location','col_label'=>'name'];
         parent::setup($param);
+
+        $this->addForeignKey(array('table'=>TABLE_PREFIX.'reserve','col_id'=>'location_id','message'=>'Reservation'));
                 
         $this->addTableCol(array('id'=>'location_id','type'=>'INTEGER','title'=>'Location ID','key'=>true,'key_auto'=>true,'list'=>false));
         $this->addTableCol(array('id'=>'name','type'=>'STRING','title'=>'Name'));

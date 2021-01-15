@@ -20,13 +20,37 @@ class DefaultSetup extends SetupModule
         $this->addDefault('TEXTAREA','RESERVE_EMAIL_FOOTER','Email footer',$param);
 
         $param = [];
-        $param['info'] = 'Specify auction catalogue footer text / contact details';
+        $param['info'] = 'Specify reservation package footer text / contact details';
         $param['rows'] = 5;
         $param['value'] = '';
         $this->addDefault('TEXTAREA','RESERVE_PACKAGE_FOOTER','Catalogue footer',$param);
 
         $param = [];
-        $param['info'] = 'Specify invoice footer text / bank account details / any info you require to be added.';
+        $param['info'] = 'Specify default itinerary text for new reservations.';
+        $param['rows'] = 5;
+        $param['value'] = '';
+        $this->addDefault('TEXTAREA','RESERVE_ITINERARY','Itinerary notes',$param);
+
+        $param = [];
+        $param['info'] = 'Specify default administration text for new reservations.';
+        $param['rows'] = 5;
+        $param['value'] = '';
+        $this->addDefault('TEXTAREA','RESERVE_ADMIN','Admin notes',$param);
+
+        $param = [];
+        $param['info'] = 'Specify default emergency text for new reservations.';
+        $param['rows'] = 5;
+        $param['value'] = '';
+        $this->addDefault('TEXTAREA','RESERVE_EMERGENCY','Emergency notes',$param);
+
+        $param = [];
+        $param['info'] = 'Specify default people preferences text for new reservations.';
+        $param['rows'] = 5;
+        $param['value'] = '';
+        $this->addDefault('TEXTAREA','RESERVE_PREFERENCE','Preference notes',$param);
+
+        $param = [];
+        $param['info'] = 'Specify reservation invoice footer text / bank account details / any info you require to be added.';
         $param['rows'] = 10;
         $param['value'] = '';
         $this->addDefault('TEXTAREA','RESERVE_INVOICE_FOOTER','Invoice PDF footer',$param);

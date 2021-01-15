@@ -34,6 +34,7 @@ class SetupDashboard extends DashboardTool
             $this->addItem('SYSTEM','Reservation Status settings',['link'=>"reserve_status?mode=list"]);
             $this->addItem('SYSTEM','Payment options',['link'=>"payment_option?mode=list"]);
             $this->addItem('SYSTEM','Payment types',['link'=>"payment_type?mode=list"]);
+            $this->addItem('SYSTEM','Package categories',['link'=>"package_category?mode=list"]);
         }    
         
     }

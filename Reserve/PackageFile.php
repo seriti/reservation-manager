@@ -10,9 +10,11 @@ class PackageFile extends Upload
   //configure
     public function setup($param = []) 
     {
-        $file_prefix = 'WWW'; 
+        
         $id_prefix = 'PACDOC'; //WebsitePageFile
 
+        /*
+        $file_prefix = 'WWW'; 
         $param = ['row_name'=>'Package document',
                   'pop_up'=>true,
                   'col_label'=>'file_name_orig',
@@ -21,6 +23,16 @@ class PackageFile extends Upload
                   'upload_path_base'=>BASE_PATH,
                   'upload_path'=>BASE_UPLOAD_WWW,
                   'prefix'=>$file_prefix,//will prefix file_name if used, but file_id.ext is unique 
+                  'upload_location'=>$id_prefix]; 
+        parent::setup($param);
+        */
+
+        $param = ['row_name'=>'Package document',
+                  'pop_up'=>true,
+                  'col_label'=>'file_name_orig',
+                  'update_calling_page'=>true,
+                  'upload_access'=>IMAGE_CONFIG['access'],
+                  'prefix'=>$id_prefix,//will prefix file_name if used, but file_id.ext is unique 
                   'upload_location'=>$id_prefix]; 
         parent::setup($param);
 
