@@ -26,7 +26,7 @@ class SetupDashboard extends DashboardTool
         $this->addItem('RESERVE','Manage service operators',['link'=>"service_operator?mode=list"]); 
 
         $this->addBlock('USER',1,2,'User setup');
-        $this->addItem('USER','NON-admin user settings',['link'=>"user_extend?mode=list"]);
+        $this->addItem('USER','Extend user settings',['link'=>"user_extend?mode=list"]);
         $this->addItem('USER','Agent setup',['link'=>"agent?mode=list"]);
 
         if($login_user->getAccessLevel() === 'GOD') {

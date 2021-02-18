@@ -15,10 +15,15 @@ class AccountReserveItemController
 
     public function __invoke($request, $response, $args)
     {
-        $table_name = TABLE_PREFIX.'reserve_item'; 
+        //NB: TABLE_PREFIX constant not applicable as not called within admin module
+        $table_prefix = MODULE_RESERVE['table_prefix'];
+
+        $table_name =  $table_prefix.'reserve_item'; 
         $table = new AccountReserveItem($this->container->mysql,$this->container,$table_name);
 
-        $table->setup();
+        $param = [];
+        $param['table_prefix'] = $table_prefix;
+        $table->setup($param);
         $html = $table->processTable();
         
         $template['html'] = $html;

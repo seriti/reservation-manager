@@ -26,11 +26,15 @@ class AccountReserve extends Table
         $this->modifyAccess($access);
 
         $this->addTableCol(array('id'=>'reserve_id','type'=>'INTEGER','title'=>'Reserve ID','key'=>true,'key_auto'=>true));
+        $this->addTableCol(array('id'=>'status_id','type'=>'INTEGER','title'=>'Status','new'=>0,
+                                 'join'=>'name FROM '.$this->table_prefix.'reserve_status WHERE status_id','edit'=>false));
         $this->addTableCol(array('id'=>'code','type'=>'STRING','title'=>'Reservation Code','edit'=>false));
+        /*
         $this->addTableCol(array('id'=>'source_id','type'=>'INTEGER','title'=>'Source',
                                  'join'=>'name FROM '.$this->table_prefix.'source WHERE source_id','edit'=>false));
         $this->addTableCol(array('id'=>'location_id','type'=>'INTEGER','title'=>'Location',
                                  'join'=>'name FROM '.$this->table_prefix.'location WHERE location_id','edit'=>false));
+        */                         
         $this->addTableCol(array('id'=>'package_id','type'=>'INTEGER','title'=>'Package',
                                  'join'=>'title FROM '.$this->table_prefix.'package WHERE package_id','edit'=>false));
         $this->addTableCol(array('id'=>'no_people','type'=>'INTETGER','title'=>'No. People','edit'=>false));
@@ -42,8 +46,7 @@ class AccountReserve extends Table
         //$this->addTableCol(array('id'=>'itinerary_notes','type'=>'TEXT','title'=>'Itinerary notes','required'=>false));
         $this->addTableCol(array('id'=>'group_leader','type'=>'STRING','title'=>'Group leader','required'=>false));
         $this->addTableCol(array('id'=>'emergency_notes','type'=>'TEXT','title'=>'Emergency contact details','required'=>false));
-        $this->addTableCol(array('id'=>'status_id','type'=>'INTEGER','title'=>'Status','new'=>0,
-                                 'join'=>'name FROM '.$this->table_prefix.'reserve_status WHERE status_id','edit'=>false));
+        
 
         $this->addSql('WHERE','T.user_id_responsible = "'.$this->db->escapeSql($this->user_id).'" ');
         $this->addSortOrder('T.reserve_id DESC','Most recent first','DEFAULT');
@@ -54,7 +57,7 @@ class AccountReserve extends Table
         //NB: spacer_edit is used in edit view and set to '' as LAST action
         $this->addAction(array('type'=>'popup','text'=>'People','url'=>'reserve_people','mode'=>'view','width'=>600,'height'=>600,'spacer_edit'=>'')); 
 
-        $this->addSearch(array('reserve_id','source_id','location_id','no_people','date_arrive','date_depart','itinerary_notes','emergency_notes','status_id'),array('rows'=>3));
+        $this->addSearch(array('reserve_id','no_people','date_arrive','date_depart','itinerary_notes','emergency_notes','status_id'),array('rows'=>3));
         
         $this->addSelect('source_id','SELECT source_id,name FROM '.$this->table_prefix.'source WHERE status = "OK" ORDER BY sort');
         $this->addSelect('location_id','SELECT location_id,name FROM '.$this->table_prefix.'location WHERE status = "OK" ORDER BY sort');

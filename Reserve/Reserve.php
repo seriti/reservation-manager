@@ -2,6 +2,7 @@
 namespace App\Reserve;
 
 use Exception;
+use Seriti\Tools\Audit;
 use Seriti\Tools\Form;
 use Seriti\Tools\Validate;
 use Seriti\Tools\Date;
@@ -33,7 +34,7 @@ class Reserve extends Table
         $this->addTableCol(array('id'=>'location_id','type'=>'INTEGER','title'=>'Location','join'=>'name FROM '.TABLE_PREFIX.'location WHERE location_id'));
         $this->addTableCol(array('id'=>'package_id','type'=>'INTEGER','title'=>'Package','join'=>'title FROM '.TABLE_PREFIX.'package WHERE package_id'));
         $this->addTableCol(array('id'=>'no_people','type'=>'INTETGER','title'=>'No. People','new'=>2));
-        $this->addTableCol(array('id'=>'user_id_responsible','type'=>'CUSTOM','title'=>'Responsible user','edit_title'=>'Responsible user ID'));
+        $this->addTableCol(array('id'=>'user_id_responsible','type'=>'CUSTOM','title'=>'Responsible user','edit_title'=>'Responsible user ID','new'=>0));
         $this->addTableCol(array('id'=>'terms_accepted','type'=>'BOOLEAN','title'=>'Terms accepted','edit'=>false));
         $this->addTableCol(array('id'=>'date_arrive','type'=>'DATE','title'=>'Date arrive','new'=>date('Y-m-d')));
         $this->addTableCol(array('id'=>'date_depart','type'=>'DATE','title'=>'Date depart','new'=>date('Y-m-d')));

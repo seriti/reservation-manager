@@ -27,7 +27,9 @@ class UserExtend extends Table
 
         $this->addSearch(array('user_id','agent_id','cell','tel','email_alt','bill_address'),array('rows'=>2));
 
-        $this->addSelect('user_id','SELECT user_id,CONCAT(zone,": ",name,", ",email) FROM '.TABLE_USER.' WHERE zone = "PUBLIC" OR zone = "AGENT" ORDER BY zone, name ');
+
+        //WHERE zone = "PUBLIC" OR zone = "AGENT"
+        $this->addSelect('user_id','SELECT user_id,CONCAT(zone,": ",name,", ",email) FROM '.TABLE_USER.' WHERE status <> "HIDE" ORDER BY zone, name ');
         $this->addSelect('agent_id','SELECT agent_id,name FROM '.TABLE_PREFIX.'agent ORDER BY sort');
     }    
 

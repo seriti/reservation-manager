@@ -44,7 +44,7 @@ class AccountDashboard extends DashboardTool
                'ORDER BY date_arrive ';
         $new_reserve = $this->db->readSqlList($sql);
         if($new_reserve === 0) {
-            $reserve_html = 'NO pending reservations'.$sql;
+            $reserve_html = 'NO pending reservations';
         } else {
             $reserve_html .= '<ul>';
             foreach($new_reserve as $reserve_id => $date_create) {
@@ -63,7 +63,7 @@ class AccountDashboard extends DashboardTool
                     if(count($missing)) {
                       $notes = '<b>'.$this->icons['required'].'</b> '.implode(', ',$missing);
                       $msg = 'Reserve ID-<b>'.$reserve_id.'</b> arriving <b>'.Date::formatDate($reserve['date_arrive']).'</b> '.
-                             'needs your attention. Please '.$edit_link;
+                             'needs your attention. Please '.$edit_link.' reservation.';
                       $this->addMessage($msg);
                     }
 

@@ -208,7 +208,7 @@ class SetupData extends SetupModuledata
         $this->addCreateSql('package',
                             'CREATE TABLE `TABLE_NAME` (
                               `package_id` INT NOT NULL AUTO_INCREMENT,
-                              `location_id` INT NOT NULL,
+                              `category_id` INT NOT NULL,
                               `package_code` VARCHAR(64) NOT NULL,
                               `title` VARCHAR(250) NOT NULL,
                               `body_markdown` TEXT NOT NULL,
@@ -284,7 +284,7 @@ class SetupData extends SetupModuledata
         $this->addInitialSql('INSERT INTO `TABLE_PREFIXagent` (name,sort,status) VALUES("Internal","10","OK")','Created default agent');
         $this->addInitialSql('INSERT INTO `TABLE_PREFIXsource` (name,sort,status) VALUES("Default source","10","OK")','Created default reservation source');
         $this->addInitialSql('INSERT INTO `TABLE_PREFIXlocation` (name,sort,status) VALUES("Default location","10","OK")','Created default location');
-        $this->addInitialSql('INSERT INTO `TABLE_PREFIXpackage` (title,package_code,sort,status) VALUES("Default package","PACK_01",10","OK")','Created default package');
+        $this->addInitialSql('INSERT INTO `TABLE_PREFIXpackage` (title,package_code,sort,status) VALUES("Default package","PACK_01",10,"OK")','Created default package');
         $this->addInitialSql('INSERT INTO `TABLE_PREFIXtransfer_type` (name,sort,status) VALUES("IN","10","OK"), ("OUT","20","OK")','Created default transfer types');
         $this->addInitialSql('INSERT INTO `TABLE_PREFIXitem_category` (name,sort,status) VALUES("Chalet","10","OK"), ("Tent","20","OK")','Created default item categories');
         $this->addInitialSql('INSERT INTO `TABLE_PREFIXitem` (name,category_id,location_id,no_people,sort,status) VALUES("Chalet-1",1,1,2,10,"OK"),("Chalet-2",1,1,2,20,"OK")','Created default item');
